@@ -52,9 +52,30 @@ import {
   RELATION_PART_OF,
   RELATION_PROVIDES_API,
 } from '@backstage/catalog-model';
-
+import {
+  ClusterAvailableResourceCard,
+  ClusterContextProvider,
+  ClusterInfoCard,
+} from '@janus-idp/backstage-plugin-ocm';
 import { TechDocsAddons } from '@backstage/plugin-techdocs-react';
 import { ReportIssue } from '@backstage/plugin-techdocs-module-addons-contrib';
+import { type Entity } from '@backstage/catalog-model';
+import { isQuayAvailable, QuayPage } from '@janus-idp/backstage-plugin-quay';
+import { TektonPage } from '@janus-idp/backstage-plugin-tekton';
+import { TopologyPage } from '@janus-idp/backstage-plugin-topology';
+import {
+  EntityArgoCDHistoryCard,
+  isArgocdAvailable,
+} from '@roadiehq/backstage-plugin-argo-cd';
+
+const isType = (types: string | string[]) => (entity: Entity) => {
+  if (!entity?.spec?.type) {
+    return false;
+  }
+  return typeof types === 'string'
+    ? entity?.spec?.type === types
+    : types.includes(entity.spec.type as string);
+};
 
 const techdocsContent = (
   <EntityTechdocsContent>
@@ -127,6 +148,14 @@ const overviewContent = (
     <Grid item md={8} xs={12}>
       <EntityHasSubcomponentsCard variant="gridItem" />
     </Grid>
+
+    <EntitySwitch>
+      <EntitySwitch.Case if={isArgocdAvailable}>
+        <Grid item sm={6}>
+          <EntityArgoCDHistoryCard />
+        </Grid>
+      </EntitySwitch.Case>
+    </EntitySwitch>
   </Grid>
 );
 
@@ -165,6 +194,18 @@ const serviceEntityPage = (
     <EntityLayout.Route path="/docs" title="Docs">
       {techdocsContent}
     </EntityLayout.Route>
+
+    <EntityLayout.Route if={isQuayAvailable} path="/quay" title="Quay">
+      <QuayPage />
+    </EntityLayout.Route>
+
+    <EntityLayout.Route path="/tekton" title="Tekton">
+      <TektonPage />
+    </EntityLayout.Route>
+
+    <EntityLayout.Route path="/topology" title="Topology">
+      <TopologyPage />
+    </EntityLayout.Route>
   </EntityLayout>
 );
 
@@ -191,6 +232,39 @@ const websiteEntityPage = (
 
     <EntityLayout.Route path="/docs" title="Docs">
       {techdocsContent}
+    </EntityLayout.Route>
+
+    <EntityLayout.Route if={isQuayAvailable} path="/quay" title="Quay">
+      <QuayPage />
+    </EntityLayout.Route>
+
+    <EntityLayout.Route path="/tekton" title="Tekton">
+      <TektonPage />
+    </EntityLayout.Route>
+
+    <EntityLayout.Route path="/topology" title="Topology">
+      <TopologyPage />
+    </EntityLayout.Route>
+  </EntityLayout>
+);
+
+export const resourcePage = (
+  <EntityLayout>
+    <EntityLayout.Route path="/status" title="status">
+      <EntitySwitch>
+        <EntitySwitch.Case if={isType('kubernetes-cluster')}>
+          <ClusterContextProvider>
+            <Grid container direction="column">
+              <Grid item>
+                <ClusterInfoCard />
+              </Grid>
+              <Grid item>
+                <ClusterAvailableResourceCard />
+              </Grid>
+            </Grid>
+          </ClusterContextProvider>
+        </EntitySwitch.Case>
+      </EntitySwitch>
     </EntityLayout.Route>
   </EntityLayout>
 );
@@ -372,6 +446,7 @@ export const entityPage = (
     <EntitySwitch.Case if={isKind('user')} children={userPage} />
     <EntitySwitch.Case if={isKind('system')} children={systemPage} />
     <EntitySwitch.Case if={isKind('domain')} children={domainPage} />
+    <EntitySwitch.Case if={isKind('resource')} children={resourcePage} />
 
     <EntitySwitch.Case>{defaultEntityPage}</EntitySwitch.Case>
   </EntitySwitch>

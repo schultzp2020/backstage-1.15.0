@@ -1,11 +1,3 @@
-/*
- * Hi!
- *
- * Note that this is an EXAMPLE Backstage backend. Please check the README.
- *
- * Happy hacking!
- */
-
 import Router from 'express-promise-router';
 import {
   createServiceBuilder,
@@ -21,6 +13,9 @@ import {
 } from '@backstage/backend-common';
 import { TaskScheduler } from '@backstage/backend-tasks';
 import { Config } from '@backstage/config';
+import { PluginEnvironment } from './types';
+import { ServerPermissionClient } from '@backstage/plugin-permission-node';
+import { DefaultIdentityClient } from '@backstage/plugin-auth-node';
 import app from './plugins/app';
 import auth from './plugins/auth';
 import catalog from './plugins/catalog';
@@ -28,9 +23,8 @@ import scaffolder from './plugins/scaffolder';
 import proxy from './plugins/proxy';
 import techdocs from './plugins/techdocs';
 import search from './plugins/search';
-import { PluginEnvironment } from './types';
-import { ServerPermissionClient } from '@backstage/plugin-permission-node';
-import { DefaultIdentityClient } from '@backstage/plugin-auth-node';
+import kubernetes from './plugins/kubernetes';
+import ocm from './plugins/ocm';
 
 function makeCreateEnv(config: Config) {
   const root = getRootLogger();
@@ -84,6 +78,9 @@ async function main() {
   const proxyEnv = useHotMemoize(module, () => createEnv('proxy'));
   const techdocsEnv = useHotMemoize(module, () => createEnv('techdocs'));
   const searchEnv = useHotMemoize(module, () => createEnv('search'));
+  const ocmEnv = useHotMemoize(module, () => createEnv('ocm'));
+  const kubernetesEnv = useHotMemoize(module, () => createEnv('kubernetes'));
+
   const appEnv = useHotMemoize(module, () => createEnv('app'));
 
   const apiRouter = Router();
@@ -93,6 +90,8 @@ async function main() {
   apiRouter.use('/techdocs', await techdocs(techdocsEnv));
   apiRouter.use('/proxy', await proxy(proxyEnv));
   apiRouter.use('/search', await search(searchEnv));
+  apiRouter.use('/kubernetes', await kubernetes(kubernetesEnv));
+  apiRouter.use('/ocm', await ocm(ocmEnv));
 
   // Add backends ABOVE this line; this 404 handler is the catch-all fallback
   apiRouter.use(notFoundHandler());
